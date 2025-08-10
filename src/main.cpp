@@ -38,7 +38,7 @@ static void blitToWindow(HDC hdc, RECT rc, const Simulator& sim){
     int dh = (rc.bottom - rc.top);
     // Draw sim area: leave UI panel space if expanded
     int panelW = g_uiCollapsed ? 24 : UI_WIDTH;
-    int simWpx = max(1, dw - panelW);
+    int simWpx = std::max(1, dw - panelW);
     StretchDIBits(hdc,
         0,0,simWpx,dh,
         0,0,sw,sh,
@@ -82,7 +82,7 @@ static bool handleUiClick(HWND hWnd, WPARAM wParam){
     int dw = rc.right - rc.left;
     int dh = rc.bottom - rc.top;
     int panelW = g_uiCollapsed ? 24 : UI_WIDTH;
-    int simWpx = max(1, dw - panelW);
+    int simWpx = std::max(1, dw - panelW);
     POINT p = clientMousePos(hWnd);
 
     // Header toggle
@@ -116,7 +116,7 @@ static void paintAtMouse(HWND hWnd, WPARAM wParam){
     int dw = rc.right - rc.left;
     int dh = rc.bottom - rc.top;
     int panelW = g_uiCollapsed ? 24 : UI_WIDTH;
-    int simWpx = max(1, dw - panelW);
+    int simWpx = std::max(1, dw - panelW);
 
     POINT p = clientMousePos(hWnd);
     if(p.x >= simWpx){
@@ -163,7 +163,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam){
             RECT rc; GetClientRect(hWnd, &rc);
             int dw = rc.right - rc.left;
             int panelW = g_uiCollapsed ? 24 : UI_WIDTH;
-            int simWpx = max(1, dw - panelW);
+            int simWpx = std::max(1, dw - panelW);
             POINT p = clientMousePos(hWnd);
             if(p.x >= simWpx){
                 if(handleUiClick(hWnd, wParam)){
@@ -244,7 +244,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow){
     MSG msg;
     while(GetMessage(&msg, nullptr, 0, 0)){
         TranslateMessage(&msg);
-        DispatchMessage(&msg, 0);
+        DispatchMessage(&msg);
     }
     return 0;
 }

@@ -155,7 +155,7 @@ void Simulator::paint(int cx, int cy, int radius, Element e, bool allowOverwrite
 void Simulator::render(){
     // map elements to pixels
     for(int y=0; y<cfg_.height; ++y){
-        for(int x=0; x<cfg_.width; ++x++){
+        for(int x=0; x<cfg_.width; ++x){
             Element e = (Element)grid_[idx(x,y)];
             uint32_t c;
             switch(e){
