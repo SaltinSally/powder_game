@@ -15,14 +15,12 @@ enum class Element : uint16_t {
     Stone = 3
 };
 
-struct Color { uint8_t r,g,b,a; };
-
 class Simulator {
 public:
     explicit Simulator(const SimConfig& cfg);
     void reset();
     void tick();
-    void paint(int cx, int cy, int radius, Element e);
+    void paint(int cx, int cy, int radius, Element e, bool allowOverwrite=false);
     const std::vector<uint32_t>& frame() const { return framebuffer_; }
     int width() const { return cfg_.width; }
     int height() const { return cfg_.height; }
@@ -33,7 +31,7 @@ public:
 
 private:
     SimConfig cfg_;
-    std::vector<uint16_t> grid_;     // element ids
+    std::vector<uint16_t> grid_;     // element ids (current)
     std::vector<uint16_t> gridNext_; // next buffer
     std::vector<uint32_t> framebuffer_;
 

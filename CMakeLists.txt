@@ -10,12 +10,16 @@ add_executable(PowderGame WIN32
     src/sim.hpp
 )
 
-# Windows-specific definitions
 if (WIN32)
   target_compile_definitions(PowderGame PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
 endif()
 
-# Optimize by default for Release
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+foreach(cfg Debug Release RelWithDebInfo MinSizeRel)
+  set_target_properties(PowderGame PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY_${cfg} ${CMAKE_BINARY_DIR}/bin/${cfg})
+endforeach()
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()

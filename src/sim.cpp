@@ -67,76 +67,58 @@ void Simulator::tick(){
     render();
 }
 
+// Looser target checks to allow cascading falls within the same tick.
+// We mainly require gridNext to be empty; grid_ may still show an occupant
+// that already moved earlier in this tick.
 void Simulator::updateCell(int x, int y, std::uniform_int_distribution<int>& coin){
     Element e = get(x,y);
     if(e == Element::Empty){
-        // nothing to copy (already empty in next)
         return;
     }
 
+    auto canWriteNext = [&](int tx, int ty){
+        return inBounds(tx,ty) && getNext(tx,ty) == Element::Empty;
+    };
+
     auto try_set = [&](int tx, int ty, Element val){
-        if(inBounds(tx,ty) && getNext(tx,ty)==Element::Empty){
+        if(canWriteNext(tx,ty)){
             setNext(tx,ty,val);
             return true;
         }
         return false;
     };
 
-    auto isEmpty = [&](int tx, int ty){
-        return inBounds(tx,ty) && get(tx,ty) == Element::Empty && getNext(tx,ty)==Element::Empty;
-    };
-
-    auto isWater = [&](int tx, int ty){
+    auto isWaterNow = [&](int tx, int ty){
         return inBounds(tx,ty) && get(tx,ty) == Element::Water && getNext(tx,ty)==Element::Empty;
     };
 
     if(e == Element::Sand){
-        // fall down; displace water; slide diagonals
         int belowY = y+1;
-        if(isEmpty(x, belowY)){
-            try_set(x, belowY, Element::Sand); return;
-        }
-        if(isWater(x, belowY)){
-            // sand sinks through water
+        if(try_set(x, belowY, Element::Sand)) return;
+        if(isWaterNow(x, belowY)){
             setNext(x, belowY, Element::Sand);
             setNext(x, y, Element::Water);
             return;
         }
         int dir = coin(rng_) ? 1 : -1;
-        if(isEmpty(x+dir, belowY)){
-            try_set(x+dir, belowY, Element::Sand); return;
-        }
-        if(isWater(x+dir, belowY)){
+        if(try_set(x+dir, belowY, Element::Sand)) return;
+        if(isWaterNow(x+dir, belowY)){
             setNext(x+dir, belowY, Element::Sand);
             setNext(x, y, Element::Water);
             return;
         }
-        // stay put
         try_set(x, y, Element::Sand);
         return;
     }
 
     if(e == Element::Water){
-        // flow down, then diagonals, then sideways
         int belowY = y+1;
-        if(isEmpty(x, belowY)){
-            try_set(x, belowY, Element::Water); return;
-        }
+        if(try_set(x, belowY, Element::Water)) return;
         int dir = coin(rng_) ? 1 : -1;
-        if(isEmpty(x+dir, belowY)){
-            try_set(x+dir, belowY, Element::Water); return;
-        }
-        if(isEmpty(x-dir, belowY)){
-            try_set(x-dir, belowY, Element::Water); return;
-        }
-        // lateral spread (limited)
-        if(isEmpty(x+dir, y)){
-            try_set(x+dir, y, Element::Water); return;
-        }
-        if(isEmpty(x-dir, y)){
-            try_set(x-dir, y, Element::Water); return;
-        }
-        // stay
+        if(try_set(x+dir, belowY, Element::Water)) return;
+        if(try_set(x-dir, belowY, Element::Water)) return;
+        if(try_set(x+dir, y, Element::Water)) return;
+        if(try_set(x-dir, y, Element::Water)) return;
         try_set(x, y, Element::Water);
         return;
     }
@@ -147,13 +129,23 @@ void Simulator::updateCell(int x, int y, std::uniform_int_distribution<int>& coi
     }
 }
 
-void Simulator::paint(int cx, int cy, int radius, Element e){
+void Simulator::paint(int cx, int cy, int radius, Element e, bool allowOverwrite){
     int r2 = radius * radius;
     for(int y = cy - radius; y <= cy + radius; ++y){
         for(int x = cx - radius; x <= cx + radius; ++x){
             int dx = x - cx, dy = y - cy;
             if(dx*dx + dy*dy <= r2 && inBounds(x,y)){
-                grid_[idx(x,y)] = (uint16_t)e;
+                int i = idx(x,y);
+                if(e == Element::Empty){
+                    grid_[i] = (uint16_t)Element::Empty;
+                    gridNext_[i] = (uint16_t)Element::Empty; // keep buffers in sync
+                }else{
+                    // Only write into Empty unless explicit overwrite is allowed
+                    if(allowOverwrite || grid_[i] == (uint16_t)Element::Empty){
+                        grid_[i] = (uint16_t)e;
+                        gridNext_[i] = (uint16_t)e; // sync next to avoid one-tick artifacts
+                    }
+                }
             }
         }
     }
@@ -163,9 +155,16 @@ void Simulator::paint(int cx, int cy, int radius, Element e){
 void Simulator::render(){
     // map elements to pixels
     for(int y=0; y<cfg_.height; ++y){
-        for(int x=0; x<cfg_.width; ++x){
+        for(int x=0; x<cfg_.width; ++x++){
             Element e = (Element)grid_[idx(x,y)];
-            framebuffer_[idx(x,y)] = colorFor(e);
+            uint32_t c;
+            switch(e){
+                case Element::Sand:  c = packRGBA(200,170,100); break;
+                case Element::Water: c = packRGBA( 60,100,220); break;
+                case Element::Stone: c = packRGBA(120,120,130); break;
+                default:             c = packRGBA(  8,  8, 12); break;
+            }
+            framebuffer_[idx(x,y)] = c;
         }
     }
 }
